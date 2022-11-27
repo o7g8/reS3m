@@ -7,6 +7,7 @@ namespace reS3m {
         private readonly AmazonS3Client s3;
         private readonly Stream stdout;
         private readonly int chunkSize;
+        private readonly Barrier allWorkDone;
 
         private readonly List<IActorRef> Workers = new List<IActorRef>();
         private readonly HashSet<IActorRef> FreeWorkers = new HashSet<IActorRef>();
@@ -21,10 +22,11 @@ namespace reS3m {
 
         private bool noMoreWork = false;
 
-        public Manager(AmazonS3Client s3client, Stream stdout, int workers, int chunkSize) {
+        public Manager(AmazonS3Client s3client, Stream stdout, int workers, int chunkSize, Barrier allWorkDone) {
             this.s3 = s3client;
             this.stdout = stdout;
             this.chunkSize = chunkSize;
+            this.allWorkDone = allWorkDone;
 
             CreateWorkers(workers);
             Receive<Messages.DownloadObject>(s3object => DownloadObject(s3object));
@@ -94,6 +96,7 @@ namespace reS3m {
         private void SendFlushWork() {
             if(!FlushQueue.Any()) {
                 Log("M: No more work");
+                allWorkDone.SignalAndWait();
                 return;
             }
             var flushJob = FlushQueue.Peek();
