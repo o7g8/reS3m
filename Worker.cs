@@ -1,4 +1,3 @@
-
 using Akka.Actor;
 using Amazon.S3;
 using Amazon.S3.Model;
@@ -34,7 +33,8 @@ namespace reS3m {
                 Key = chunk.Key,
                 ByteRange = new ByteRange(chunk.Chunk.Start, chunk.Chunk.End)
             };
-            var resp = await s3.GetObjectAsync(request);
+            using var resp = await s3.GetObjectAsync(request);
+            
             using var stream = resp.ResponseStream;
             downloadedBytes = stream.Read(buffer, 0, chunkSize);
             if(downloadedBytes != chunk.Chunk.Size) {

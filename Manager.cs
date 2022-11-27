@@ -39,14 +39,14 @@ namespace reS3m {
             var chunks = GetChunks(obj.Size, chunkSize);
             Log($"M: {obj.Bucket}/{obj.Key} is split into {chunks.Count} chunks.");
             foreach (var chunk in chunks) {
-                var job = new DownloadJob {
+                var downloadJob = new DownloadJob {
                     Bucket = obj.Bucket,
                     Key = obj.Key,
                     Chunk = chunk};
-                DownloadQueue.Enqueue(job);
+                DownloadQueue.Enqueue(downloadJob);
                 FlushQueue.Enqueue(new FlushJob {
-                    S3ObjectName = FullObjName(job.Bucket, job.Key),
-                    ChunkNo = job.Chunk.No
+                    S3ObjectName = FullObjName(downloadJob.Bucket, downloadJob.Key),
+                    ChunkNo = downloadJob.Chunk.No
                 });
             }
             SendDownloadWork();
@@ -90,7 +90,7 @@ namespace reS3m {
                 var worker = Context.ActorOf(Props.Create<ChunkDownloader>(Self, s3, chunkSize, stdout), $"worker{i}");
                 Workers.Add(worker);
                 FreeWorkers.Add(worker);
-                Console.Error.WriteLine($"Created worker{i}");
+                Log($"M: Created worker{i}");
             }
         }
 
