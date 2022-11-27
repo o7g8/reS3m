@@ -28,6 +28,7 @@ while(s3ObjName != null) {
     s3ObjName = Console.In.ReadLine();
 }
 
+manager.Tell(new reS3m.Messages.NoMoreWork());
 allWorkDone.SignalAndWait();
 //await actorSystem.Terminate();
 

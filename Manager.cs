@@ -81,6 +81,7 @@ namespace reS3m {
         }
 
         private void NoMoreWork(Messages.NoMoreWork noWork) {
+            Log("M: No more work");
             this.noMoreWork = true;
         }
 
@@ -94,8 +95,8 @@ namespace reS3m {
         }
 
         private void SendFlushWork() {
-            if(!FlushQueue.Any()) {
-                Log("M: No more work");
+            if(noMoreWork && !FlushQueue.Any()) {
+                Log("M: No more work and flush queue is empty");
                 allWorkDone.SignalAndWait();
                 return;
             }
