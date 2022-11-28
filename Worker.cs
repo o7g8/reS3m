@@ -35,10 +35,14 @@ namespace reS3m {
                 ByteRange = new ByteRange(chunk.Chunk.Start, chunk.Chunk.End)
             };
             
+
             // TODO: consider incremental download, so we don't waste already downloaded data
-            for(var attempt = 0; attempt < DOWNLOAD_ATTEMPTS; attempt++) {
+            int attempt = 0;
+            for(attempt = 0; attempt < DOWNLOAD_ATTEMPTS; attempt++) {
+                System.Net.HttpStatusCode statusCode;
                 try {
                     using var resp = await s3.GetObjectAsync(request);
+                    statusCode = resp.HttpStatusCode;
                     using var stream = resp.ResponseStream;
                     downloadedBytes = stream.Read(buffer, 0, chunkSize);
                 } catch(Exception e) {
@@ -48,14 +52,17 @@ namespace reS3m {
                 }
 
                 if(downloadedBytes != chunk.Chunk.Size) {
-                    Log($"W: ERROR - Downloaded {downloadedBytes} bytes instead of {chunk.Chunk.Size} (try {attempt})");
+                    Log($"W: ERROR - chunk #{chunk.Chunk.No} downloaded {downloadedBytes} bytes instead of {chunk.Chunk.Size} (try {attempt})");
                     continue;
                     //throw new Exception($"Downloaded {downloadedBytes} bytes instead of {chunk.Chunk.Size}");
                 }
                 break;   
             }
+            if(attempt == DOWNLOAD_ATTEMPTS) {
+                Log($"W: ERROR - failed to download chunk #{chunk.Chunk.No}");
+                throw new Exception("Failed to download chunk #{chunk.Chunk.No}");
+            }
 
-            
             downloadedChunkNo = chunk.Chunk.No;
             downloadedS3Obj = chunk.BucketName + "/" + chunk.Key;
             manager.Tell(new ChunkDownloaded(Self, chunk));
