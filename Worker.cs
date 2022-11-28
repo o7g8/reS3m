@@ -5,6 +5,7 @@ using reS3m.Messages;
 
 namespace reS3m {
     internal class ChunkDownloader : ReceiveActor {
+        const int DOWNLOAD_ATTEMPTS = 10;
         private readonly IActorRef manager;
         private readonly AmazonS3Client s3;
         private readonly int chunkSize;
@@ -35,7 +36,7 @@ namespace reS3m {
             };
             
             // TODO: consider incremental download, so we don't waste already downloaded data
-            for(var attempt = 0; attempt < 5; attempt++) {
+            for(var attempt = 0; attempt < DOWNLOAD_ATTEMPTS; attempt++) {
                 try {
                     using var resp = await s3.GetObjectAsync(request);
                     using var stream = resp.ResponseStream;
