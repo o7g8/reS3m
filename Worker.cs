@@ -34,17 +34,25 @@ namespace reS3m {
                 Key = chunk.Key,
                 ByteRange = new ByteRange(chunk.Chunk.Start, chunk.Chunk.End)
             };
+            var expectedLength = chunk.Chunk.End - chunk.Chunk.Start + 1;
             
-
-            // TODO: consider incremental download, so we don't waste already downloaded data
             int attempt = 0;
             for(attempt = 0; attempt < DOWNLOAD_ATTEMPTS; attempt++) {
-                System.Net.HttpStatusCode statusCode;
                 try {
                     using var resp = await s3.GetObjectAsync(request);
-                    statusCode = resp.HttpStatusCode;
+                    if(resp.ContentLength != expectedLength) {
+                        Log($"W: ERROR - chunk #{chunk.Chunk.No} expected {expectedLength} actual content length {resp.ContentLength} (try {attempt})");
+                        continue;
+                    }
                     using var stream = resp.ResponseStream;
-                    downloadedBytes = stream.Read(buffer, 0, chunkSize);
+                    var offset = 0;
+                    var bytesToRead = (int)expectedLength;
+                    while(bytesToRead > 0) {
+                        var bytesRead = stream.Read(buffer, offset, bytesToRead);
+                        bytesToRead = bytesToRead - bytesRead;
+                        offset = offset + bytesRead;
+                    }
+                    downloadedBytes = (int)expectedLength;
                 } catch(Exception e) {
                     Log($"W: ERROR - {e.Message} (try {attempt})");
                     continue;
