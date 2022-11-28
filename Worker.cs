@@ -12,7 +12,7 @@ namespace reS3m {
         private readonly byte[] buffer;
         private int downloadedBytes;
         private string downloadedS3Obj = string.Empty;
-        private int downloadedChunkNo;
+        private long downloadedChunkNo;
         
         public ChunkDownloader(IActorRef manager, AmazonS3Client s3client, int chunkSize, Stream stdout) {
             this.manager = manager;
@@ -27,16 +27,22 @@ namespace reS3m {
 
         private async Task DownloadChunk(DownloadChunk chunk)
         {
-            Log($"W: ---> {chunk.BucketName}/{chunk.Key} #{chunk.Chunk.No}");
+            Log($"W: ---> {chunk.BucketName}/{chunk.Key} #{chunk.Chunk.No}[{chunk.Chunk.Start},{chunk.Chunk.End}]");
             var request = new GetObjectRequest() {
                 BucketName = chunk.BucketName,
                 Key = chunk.Key,
                 ByteRange = new ByteRange(chunk.Chunk.Start, chunk.Chunk.End)
             };
-            using var resp = await s3.GetObjectAsync(request);
             
-            using var stream = resp.ResponseStream;
-            downloadedBytes = stream.Read(buffer, 0, chunkSize);
+            try {
+                using var resp = await s3.GetObjectAsync(request);
+                using var stream = resp.ResponseStream;
+                downloadedBytes = stream.Read(buffer, 0, chunkSize);
+            } catch(Exception e) {
+                Log($"W: ERROR - {e.Message}");
+                throw;
+            }
+
             if(downloadedBytes != chunk.Chunk.Size) {
                 throw new Exception($"Downloaded {downloadedBytes} bytes instead of {chunk.Chunk.Size}");
             }

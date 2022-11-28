@@ -17,8 +17,8 @@ namespace reS3m {
         private readonly Queue<FlushJob> FlushQueue = new Queue<FlushJob>();
 
         // objName -> {chunkNo}
-        private Dictionary<string, Dictionary<int, IActorRef>> DownloadedChunks = 
-            new Dictionary<string, Dictionary<int, IActorRef>>();
+        private Dictionary<string, Dictionary<long, IActorRef>> DownloadedChunks = 
+            new Dictionary<string, Dictionary<long, IActorRef>>();
 
         private bool noMoreWork = false;
 
@@ -70,7 +70,8 @@ namespace reS3m {
 
         private List<Chunk> GetChunks(long objSize, int chunkSize) {
             var chunks = new List<Chunk>();
-            for(int start = 0, no = 0; start <= objSize; start = start + chunkSize, no++) {
+            for(long start = 0, no = 0; start <= objSize; start = start + chunkSize, no++) {
+                //Log($"M: chunk #{no} [{start}, -] ");
                 chunks.Add(new Chunk {
                     No = no,
                     Start = start,
@@ -101,10 +102,13 @@ namespace reS3m {
                 return;
             }
             var flushJob = FlushQueue.Peek();
+            Log($"M: need to flush {flushJob.S3ObjectName} (#{flushJob.ChunkNo})");
             if(!DownloadedChunks.ContainsKey(flushJob.S3ObjectName)) {
+                Log($"M: the {flushJob.S3ObjectName} is not yed downloaded");
                 return; // no chunks for the given object is downloaded
             } 
             if(!DownloadedChunks[flushJob.S3ObjectName].ContainsKey(flushJob.ChunkNo)) {
+                Log($"M: the {flushJob.S3ObjectName} (#{flushJob.ChunkNo}) is not yed downloaded");
                 return; // the chunk is not yet downloaded
             }
             var worker = DownloadedChunks[flushJob.S3ObjectName][flushJob.ChunkNo];
@@ -120,10 +124,12 @@ namespace reS3m {
         private void ChunkDownloaded(Messages.ChunkDownloaded chunk) {
             // Once the chunk is downloaded we need to reconcile it with the
             var s3obj = FullObjName(chunk.Chunk.BucketName, chunk.Chunk.Key);
+            Log($"M: {s3obj} chunk #{chunk.Chunk.Chunk.No} downloaded");
+
             if(DownloadedChunks.ContainsKey(s3obj)) {
                 DownloadedChunks[s3obj].Add(chunk.Chunk.Chunk.No, chunk.Sender);
             } else {
-                DownloadedChunks.Add(s3obj, new Dictionary<int, IActorRef> {
+                DownloadedChunks.Add(s3obj, new Dictionary<long, IActorRef> {
                     {chunk.Chunk.Chunk.No, chunk.Sender}
                 });
             }
@@ -157,7 +163,7 @@ namespace reS3m {
 
     public struct FlushJob {
         public string S3ObjectName;
-        public int ChunkNo;
+        public long ChunkNo;
     }
     public struct DownloadJob {
         public string Bucket;
