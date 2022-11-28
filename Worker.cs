@@ -34,18 +34,27 @@ namespace reS3m {
                 ByteRange = new ByteRange(chunk.Chunk.Start, chunk.Chunk.End)
             };
             
-            try {
-                using var resp = await s3.GetObjectAsync(request);
-                using var stream = resp.ResponseStream;
-                downloadedBytes = stream.Read(buffer, 0, chunkSize);
-            } catch(Exception e) {
-                Log($"W: ERROR - {e.Message}");
-                throw;
+            // TODO: consider incremental download, so we don't waste already downloaded data
+            for(var attempt = 0; attempt < 5; attempt++) {
+                try {
+                    using var resp = await s3.GetObjectAsync(request);
+                    using var stream = resp.ResponseStream;
+                    downloadedBytes = stream.Read(buffer, 0, chunkSize);
+                } catch(Exception e) {
+                    Log($"W: ERROR - {e.Message} (try {attempt})");
+                    continue;
+                    //throw;
+                }
+
+                if(downloadedBytes != chunk.Chunk.Size) {
+                    Log($"W: ERROR - Downloaded {downloadedBytes} bytes instead of {chunk.Chunk.Size} (try {attempt})");
+                    continue;
+                    //throw new Exception($"Downloaded {downloadedBytes} bytes instead of {chunk.Chunk.Size}");
+                }
+                break;   
             }
 
-            if(downloadedBytes != chunk.Chunk.Size) {
-                throw new Exception($"Downloaded {downloadedBytes} bytes instead of {chunk.Chunk.Size}");
-            }
+            
             downloadedChunkNo = chunk.Chunk.No;
             downloadedS3Obj = chunk.BucketName + "/" + chunk.Key;
             manager.Tell(new ChunkDownloaded(Self, chunk));
@@ -55,6 +64,7 @@ namespace reS3m {
             Log($"W: <--- {chunk.S3ObjectName} #{chunk.ChunkNo}");
 
             if(downloadedS3Obj != chunk.S3ObjectName || downloadedChunkNo != chunk.ChunkNo) {
+                Log("W: ERROR - Flushing wrong chunk");
                 throw new Exception("Flushing wrong chunk");
             }
             stdout.Write(buffer, 0, downloadedBytes);

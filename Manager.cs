@@ -147,11 +147,13 @@ namespace reS3m {
         private void DequeueFlushedChunk(ChunkFlushed flushed)
         {
             if(!FlushQueue.Any()) {
+                Log("M: ERROR - Expected non-empty flush queue");
                 throw new Exception("Expected non-empty flush queue");
             }
             var queued = FlushQueue.Dequeue();
             if(queued.S3ObjectName != flushed.S3ObjectName || 
                 queued.ChunkNo != flushed.ChunkNo) {
+                Log("M: ERROR - Mismatch b/w flushed and queued to flush");
                 throw new Exception("Mismatch b/w flushed and queued to flush");
             }
         }
