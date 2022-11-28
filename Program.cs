@@ -1,12 +1,18 @@
 ﻿using Akka.Actor;
+using CommandLine;
 using reS3m;
 
-// TODO: add CLI arguments
-// -w: no of workers
-// -c: chunk size // does it need to have alignment (e.g. like x1024)???
+var workers = 10;
+var chunkSize = 8 * 1024 * 1024;
 
-var workers = 3;
-var chunkSize = 100;
+Parser.Default.ParseArguments<CommandLineOptions>(args)
+      .WithParsed<CommandLineOptions>(o => {
+           workers = o.Workers;
+           chunkSize = o.ChunkSize;
+      })
+      .WithNotParsed<CommandLineOptions>(o => {
+           System.Environment.Exit(0);
+      });
 
 using var allWorkDone = new Barrier(2);
 using var s3client = new Amazon.S3.AmazonS3Client();
@@ -32,4 +38,13 @@ allWorkDone.SignalAndWait();
     var uri = new System.Uri(s3uri);
     var key = uri.AbsolutePath.Substring(1); // remove 1st slash
     return (uri.Host, key);
+}
+
+public class CommandLineOptions
+{
+   [Option('w', "workers", Required = false, Default = 10,  HelpText = "Number of workers")]
+   public int Workers { get; set; }
+ 
+   [Option('c', "chunk", Required = false, Default = 8 * 1024 * 1024, HelpText = "Chunk size" )]
+   public int ChunkSize { get; set; }
 }

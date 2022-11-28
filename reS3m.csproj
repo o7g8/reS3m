@@ -10,6 +10,7 @@
   <ItemGroup>
     <PackageReference Include="Akka" Version="1.4.46" />
     <PackageReference Include="AWSSDK.S3" Version="3.7.101.22" />
+    <PackageReference Include="CommandLineParser" Version="2.9.1" />
   </ItemGroup>
 
 </Project>
