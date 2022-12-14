@@ -2,13 +2,17 @@
 using CommandLine;
 using reS3m;
 
+const int PCAP_FILE_HEADER_SIZE = 24;
+
 var workers = 10;
 var chunkSize = 8 * 1024 * 1024;
+var skipHeader = false;
 
 Parser.Default.ParseArguments<CommandLineOptions>(args)
       .WithParsed<CommandLineOptions>(o => {
            workers = o.Workers;
            chunkSize = o.ChunkSize;
+           skipHeader = o.SkipHeader;
       })
       .WithNotParsed<CommandLineOptions>(o => {
            System.Environment.Exit(0);
@@ -26,7 +30,8 @@ while(s3ObjName != null) {
     (var bucketName, var key) = ParseS3Uri(s3ObjName);
 
     var meta = await s3client.GetObjectMetadataAsync(bucketName, key);
-    manager.Tell(new reS3m.Messages.DownloadObject(bucketName, key, meta.ContentLength));
+    var offset = skipHeader ? PCAP_FILE_HEADER_SIZE : 0;
+    manager.Tell(new reS3m.Messages.DownloadObject(bucketName, key, meta.ContentLength, offset));
 
     s3ObjName = Console.In.ReadLine();
 }
@@ -47,4 +52,7 @@ public class CommandLineOptions
  
    [Option('c', "chunk", Required = false, Default = 8 * 1024 * 1024, HelpText = "Chunk size" )]
    public int ChunkSize { get; set; }
+
+   [Option('s', "skip-pcap-header", Required = false, Default = false, HelpText = "Skip PCAP file header" )]
+   public bool SkipHeader { get; set; }
 }

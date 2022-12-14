@@ -13,12 +13,14 @@ namespace reS3m.Messages
         public string Bucket {get; }
         public string Key {get; }
         public long Size {get;}
+        public int SkipBytes {get;}
 
-        public DownloadObject(string bucket, string key, long size)
+        public DownloadObject(string bucket, string key, long size, int skipBytes = 0)
         {
             this.Bucket = bucket;
             this.Key = key;
             this.Size = size; 
+            this.SkipBytes = skipBytes;
         } 
     }
 

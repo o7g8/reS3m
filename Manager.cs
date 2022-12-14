@@ -36,7 +36,7 @@ namespace reS3m {
         }
 
         private void DownloadObject(Messages.DownloadObject obj) {
-            var chunks = GetChunks(obj.Size, chunkSize);
+            var chunks = GetChunks(obj.Size, chunkSize, obj.SkipBytes);
             Log($"M: {obj.Bucket}/{obj.Key} is split into {chunks.Count} chunks.");
             foreach (var chunk in chunks) {
                 var downloadJob = new DownloadJob {
@@ -68,9 +68,9 @@ namespace reS3m {
             }
         }
 
-        private List<Chunk> GetChunks(long objSize, int chunkSize) {
+        private List<Chunk> GetChunks(long objSize, int chunkSize, int skipBytes) {
             var chunks = new List<Chunk>();
-            for(long start = 0, no = 0; start <= objSize; start = start + chunkSize, no++) {
+            for(long start = skipBytes, no = 0; start <= objSize; start = start + chunkSize, no++) {
                 //Log($"M: chunk #{no} [{start}, -] ");
                 chunks.Add(new Chunk {
                     No = no,
