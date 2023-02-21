@@ -1,6 +1,6 @@
 # reS3m ("restream")
 
-The utility allows to consolidate chunked data stored in S3 into a continious data stream for further processing.
+The command-line utility allows to consolidate chunked data stored in S3 into a continious data stream for further processing.
 
 The utility reads names of S3 objects from `stdin`, reads the objects data from S3 and sends it into `stdout`. The utility prints diagnostic messages into `stderr`.
 
@@ -14,7 +14,11 @@ The utility has following optional command-line arguments:
 
 * `-s` - skip bytes from the start each object, can be used to skip object headers (default: 0)
 
-To achive maximum performance in your environment (data, machine, network), you need to experiment with values of `-w` and `-c`. The "good" value of `-c` for large objects is normally within 8-16 Mb. If you use the utility within a VPC, then access S3 via a private endpoint for the maximum performance.
+To achive maximum performance in your environment (data, machine, network), you need to experiment with values of `-w` and `-c`. The "good" value of `-c` for large objects is normally within 8-16 Mb.
+
+If you use the utility within a VPC, then access S3 via a private endpoint for the maximum performance.
+
+For maximum performance you need to build the utility as a native binary as described below in the document.
 
 ## Examples
 
@@ -38,7 +42,7 @@ cat s3objects.txt | ~/bin/reS3m -s 24 -w 60 -c 16777216 2>debug.log | <further p
 
 ## Build
 
-To build the utility you need to have .NET7 SDK installed on the build machine.
+To build the utility you need to have [.NET 7 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/7.0) installed on the build machine. You can build the utility on Linux, Windows, and macOS.
 
 Build self-contained executable for Linux/x64:
 
