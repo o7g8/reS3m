@@ -44,7 +44,8 @@ namespace reS3m {
                         Log($"W: ERROR - chunk #{chunk.Chunk.No} expected {expectedLength} actual content length {resp.ContentLength} (try {attempt})");
                         continue;
                     }
-                    using var stream = resp.ResponseStream;
+                    using var responseStream = resp.ResponseStream;
+                    using var stream = new BufferedStream(responseStream);
                     var offset = 0;
                     var bytesToRead = (int)expectedLength;
                     while(bytesToRead > 0) {
