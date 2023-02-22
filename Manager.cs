@@ -23,6 +23,8 @@ namespace reS3m {
         private bool noMoreWork = false;
 
         public Manager(AmazonS3Client s3client, Stream stdout, int workers, int chunkSize, Barrier allWorkDone) {
+            Log($"M: Created Manager");
+
             this.s3 = s3client;
             this.stdout = stdout;
             this.chunkSize = chunkSize;
@@ -84,6 +86,9 @@ namespace reS3m {
         private void NoMoreWork(Messages.NoMoreWork noWork) {
             Log("M: No more work");
             this.noMoreWork = true;
+            if(!FlushQueue.Any()) {
+                SignalWorkCompletion();
+            }
         }
 
         private void CreateWorkers(int workers) {
@@ -97,8 +102,11 @@ namespace reS3m {
 
         private void SendFlushWork() {
             if(noMoreWork && !FlushQueue.Any()) {
-                Log("M: No more work and flush queue is empty");
-                allWorkDone.SignalAndWait();
+                SignalWorkCompletion();
+                return;
+            }
+            if (!FlushQueue.Any()) {
+                Log($"M: Flush queue is empty");
                 return;
             }
             var flushJob = FlushQueue.Peek();
@@ -119,6 +127,12 @@ namespace reS3m {
             if(!DownloadedChunks[flushJob.S3ObjectName].Any()) {
                 DownloadedChunks.Remove(flushJob.S3ObjectName);
             }
+        }
+
+        private void SignalWorkCompletion()
+        {
+            Log("M: No more work and flush queue is empty");
+            allWorkDone.SignalAndWait();
         }
 
         private void ChunkDownloaded(Messages.ChunkDownloaded chunk) {
