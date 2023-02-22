@@ -7,7 +7,7 @@ namespace reS3m {
     internal class ChunkDownloader : ReceiveActor {
         const int DOWNLOAD_ATTEMPTS = 10;
         private readonly IActorRef manager;
-        private readonly AmazonS3Client s3;
+        private readonly IAmazonS3 s3;
         private readonly int chunkSize;
         private readonly Stream stdout;
         private readonly byte[] buffer;
@@ -15,7 +15,7 @@ namespace reS3m {
         private string downloadedS3Obj = string.Empty;
         private long downloadedChunkNo;
         
-        public ChunkDownloader(IActorRef manager, AmazonS3Client s3client, int chunkSize, Stream stdout) {
+        public ChunkDownloader(IActorRef manager, IAmazonS3 s3client, int chunkSize, Stream stdout) {
             this.manager = manager;
             this.s3 = s3client;
             this.chunkSize = chunkSize;
@@ -44,6 +44,7 @@ namespace reS3m {
                         Log($"W: ERROR - chunk #{chunk.Chunk.No} expected {expectedLength} actual content length {resp.ContentLength} (try {attempt})");
                         continue;
                     }
+                    // TODO: wrap into BufferedStream(Stream), experiment with buffer size (>4K)
                     using var stream = resp.ResponseStream;
                     var offset = 0;
                     var bytesToRead = (int)expectedLength;

@@ -4,7 +4,8 @@ using reS3m.Messages;
 
 namespace reS3m {
     internal class Manager : ReceiveActor {
-        private readonly AmazonS3Client s3;
+        private readonly IS3ClientFactory s3Factory;
+        private readonly IAmazonS3 s3;
         private readonly Stream stdout;
         private readonly int chunkSize;
         private readonly Barrier allWorkDone;
@@ -22,10 +23,11 @@ namespace reS3m {
 
         private bool noMoreWork = false;
 
-        public Manager(AmazonS3Client s3client, Stream stdout, int workers, int chunkSize, Barrier allWorkDone) {
+        public Manager(IS3ClientFactory s3Factory, Stream stdout, int workers, int chunkSize, Barrier allWorkDone) {
             Log($"M: Created Manager");
 
-            this.s3 = s3client;
+            this.s3Factory = s3Factory;
+            this.s3 = s3Factory.CreateClient();
             this.stdout = stdout;
             this.chunkSize = chunkSize;
             this.allWorkDone = allWorkDone;
@@ -93,7 +95,8 @@ namespace reS3m {
 
         private void CreateWorkers(int workers) {
             for(var i = 0; i < workers; i++) {
-                var worker = Context.ActorOf(Props.Create<ChunkDownloader>(Self, s3, chunkSize, stdout), $"worker{i}");
+                var s3client = s3Factory.CreateClient();
+                var worker = Context.ActorOf(Props.Create<ChunkDownloader>(Self, s3client, chunkSize, stdout), $"worker{i}");
                 Workers.Add(worker);
                 FreeWorkers.Add(worker);
                 Log($"M: Created worker{i}");

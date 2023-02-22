@@ -17,11 +17,13 @@ Parser.Default.ParseArguments<CommandLineOptions>(args)
       });
 
 using var allWorkDone = new Barrier(2);
-using var s3client = new Amazon.S3.AmazonS3Client();
 using var stdout = Console.OpenStandardOutput();
 
+var s3Factory = new S3ClientFactory();
+using var s3client = s3Factory.CreateClient();
+
 using var actorSystem = ActorSystem.Create("reS3m");
-var manager = actorSystem.ActorOf(Props.Create<Manager>(s3client, stdout, workers, chunkSize, allWorkDone), "manager");
+var manager = actorSystem.ActorOf(Props.Create<Manager>(s3Factory, stdout, workers, chunkSize, allWorkDone), "manager");
 
 var s3ObjName = Console.In.ReadLine();
 while(s3ObjName != null) {
